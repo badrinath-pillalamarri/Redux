@@ -7,7 +7,9 @@ const inc ='account/increment'
 const dec ='account/decrement'
 const incByAmt ='account/incrementByAmount'
 const decByAmt ='decrementByAmount'
-const getAccUser='account/getUser'
+const getAccUserPending='account/getUser/pending'
+const getAccUserFulfilled='account/getUser/fulfilled'
+const getAccUserRejected='account/getUser/rejected'
 
 const incBonus='bonus/increment'
 
@@ -23,8 +25,12 @@ const store=createStore(
 function accountReducer(state={amount:1},action){
 
     switch(action.type){
-        case init:
-            return {amount:action.payload}
+        case getAccUserFulfilled:
+            return {amount:action.payload,pending:false}
+        case getAccUserRejected:
+            return {...state,error:action.error,pending:false}
+        case getAccUserPending:
+            return {...state,pending:true}
         case inc:
             return {amount:state.amount+1}
         case dec:
@@ -78,14 +84,30 @@ getUser()
 
 function getUserAccount(id){
     return async (dispatch,getState)=>{
-        const {data} =await axios.get(`http://localhost:3000/accounts/${id}`)
-        dispatch(initUser(data.amount))
+        try{
+            dispatch(getAccountUserPending())
+            const {data} =await axios.get(`http://localhost:3000/accounts/${id}`)
+          dispatch(getAccountUserFulfilled(data.amount))
+        }catch(error){
+        
+            dispatch(getAccountUserRejected(error.message))
+        }
+   
     }
 }
 
-function initUser(value){
-    return {type:init,payload:value}
+function getAccountUserFulfilled(value){
+    return {type:getAccUserFulfilled,payload:value}
 }
+
+function getAccountUserRejected(error){
+    return {type:getAccUserRejected,error:error}
+}
+
+function getAccountUserPending(){
+    return {type:getAccUserPending}
+}
+
 function increment(){
     return {type:inc}
 }
@@ -108,10 +130,10 @@ function incrementBonus(value){
 
 
 
-store.dispatch(getUserAccount(2))
+store.dispatch(getUserAccount(1))
 
 //store.dispatch(incrementByAmount(200))
-store.dispatch(incrementBonus())
+//store.dispatch(incrementBonus())
 /*
 store.dispatch(initUser(20))   
 store.dispatch(increment())
